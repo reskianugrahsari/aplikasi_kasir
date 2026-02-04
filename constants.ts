@@ -14,7 +14,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     name: 'Es Kopi Susu Gula Aren',
     price: 18000,
     category: Category.DRINK,
-    image: 'C:/Users/Reski_Anugrah_Sari/.gemini/antigravity/brain/77943b5e-d5b6-4748-addf-eebb296013da/es_kopi_susu_aren_1770126071691.png',
+    image: '/kopi.png',
     stock: 100,
   },
   {
@@ -22,7 +22,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     name: 'Mie Goreng Jawa',
     price: 22000,
     category: Category.FOOD,
-    image: 'C:/Users/Reski_Anugrah_Sari/.gemini/antigravity/brain/77943b5e-d5b6-4748-addf-eebb296013da/mie_goreng_jawa_1770126087783.png',
+    image: '/mie.png',
     stock: 40,
   },
   {
@@ -30,7 +30,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     name: 'Teh Manis Dingin',
     price: 5000,
     category: Category.DRINK,
-    image: 'C:/Users/Reski_Anugrah_Sari/.gemini/antigravity/brain/77943b5e-d5b6-4748-addf-eebb296013da/teh_manis_dingin_1770126115103.png',
+    image: '/teh.png',
     stock: 200,
   },
   {
@@ -38,7 +38,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     name: 'Kentang Goreng',
     price: 15000,
     category: Category.SNACK,
-    image: 'C:/Users/Reski_Anugrah_Sari/.gemini/antigravity/brain/77943b5e-d5b6-4748-addf-eebb296013da/kentang_goreng_1770126156570.png',
+    image: '/kentang.png',
     stock: 80,
   },
   {
@@ -46,7 +46,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     name: 'Roti Bakar Coklat',
     price: 12000,
     category: Category.DESSERT,
-    image: 'C:/Users/Reski_Anugrah_Sari/.gemini/antigravity/brain/77943b5e-d5b6-4748-addf-eebb296013da/roti_bakar_coklat_1770126175308.png',
+    image: '/roti.png',
     stock: 30,
   },
   {
@@ -54,7 +54,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     name: 'Burger Sapi',
     price: 35000,
     category: Category.FOOD,
-    image: 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?auto=format&fit=crop&w=400&h=400',
+    image: '/burger.png',
     stock: 25,
   },
   {
@@ -62,7 +62,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     name: 'Matcha Latte',
     price: 24000,
     category: Category.DRINK,
-    image: 'https://images.unsplash.com/photo-1536256263959-770b48d82b0a?auto=format&fit=crop&w=400&h=400',
+    image: '/matcha.png',
     stock: 45,
   },
 ];

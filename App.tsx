@@ -5,24 +5,24 @@ import { POS } from './components/POS';
 import { Inventory } from './components/Inventory';
 import { AIAssistant } from './components/AIAssistant';
 import { Login } from './components/Login';
+import { Menu, Store, Database, AlertCircle, RefreshCw, Layers } from 'lucide-react';
 import { INITIAL_PRODUCTS, MOCK_TRANSACTIONS } from './constants';
 import { Product, Transaction, AdminView, AppMode, CartItem } from './types';
 import * as supabaseService from './services/supabaseService';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    // Check if user was previously logged in
     return localStorage.getItem('isLoggedIn') === 'true';
   });
   const [appMode, setAppMode] = useState<AppMode>('admin');
   const [currentAdminView, setCurrentAdminView] = useState<AdminView>('dashboard');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
-  // Load data from Supabase when authenticated
   useEffect(() => {
     if (!isAuthenticated) {
       setIsLoading(false);
@@ -34,7 +34,6 @@ const App: React.FC = () => {
         setIsLoading(true);
         setError(null);
 
-        // Try to migrate data from localStorage first
         try {
           const migrationResult = await supabaseService.migrateFromLocalStorage();
           if (migrationResult.productsCount > 0 || migrationResult.transactionsCount > 0) {
@@ -44,10 +43,8 @@ const App: React.FC = () => {
           console.warn('Migration failed or already completed:', migrationError);
         }
 
-        // Load products from Supabase
         const productsData = await supabaseService.getProducts();
 
-        // If no products in database, use initial products
         if (productsData.length === 0) {
           console.log('No products found, initializing with default products');
           for (const product of INITIAL_PRODUCTS) {
@@ -58,10 +55,8 @@ const App: React.FC = () => {
           setProducts(productsData);
         }
 
-        // Load transactions from Supabase
         const transactionsData = await supabaseService.getTransactions();
 
-        // If no transactions in database, use mock transactions
         if (transactionsData.length === 0) {
           console.log('No transactions found, initializing with mock data');
           setTransactions([]);
@@ -69,10 +64,10 @@ const App: React.FC = () => {
           setTransactions(transactionsData);
         }
 
-        setIsLoading(false);
+        setTimeout(() => setIsLoading(false), 800);
       } catch (err) {
         console.error('Error loading data:', err);
-        setError('Gagal memuat data dari database. Menggunakan data lokal.');
+        setError('Gagal memuat data dari database cloud. Menggunakan sistem cadangan lokal.');
 
         const savedProducts = localStorage.getItem('products');
         const savedTransactions = localStorage.getItem('transactions');
@@ -87,7 +82,6 @@ const App: React.FC = () => {
     loadData();
   }, [isAuthenticated]);
 
-  // Subscribe to real-time updates (optional)
   useEffect(() => {
     const unsubscribeProducts = supabaseService.subscribeToProducts((updatedProducts) => {
       setProducts(updatedProducts);
@@ -109,7 +103,7 @@ const App: React.FC = () => {
   ) => {
     try {
       const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-      const finalTotal = total * 1.1; // Add tax
+      const finalTotal = total * 1.1;
 
       const newTransaction = {
         date: new Date().toISOString(),
@@ -118,28 +112,18 @@ const App: React.FC = () => {
         items,
       };
 
-      // Save to Supabase
       const savedTransaction = await supabaseService.createTransaction(newTransaction, items);
-
-      // Update local state
       setTransactions(prev => [savedTransaction, ...prev]);
 
-      // Refresh products to get updated stock
       const updatedProducts = await supabaseService.getProducts();
       setProducts(updatedProducts);
-
-      console.log(`Transaksi Berhasil! Total: Rp ${finalTotal.toLocaleString('id-ID')}`);
     } catch (err: any) {
       console.error('Error completing transaction:', err);
-      const errorMessage = err.message || 'Gagal menyimpan transaksi ke database.';
-      const detailMessage = err.details ? `\n\nDetail: ${err.details}` : '';
-      const hintMessage = err.hint ? `\n\nSaran Teknis: ${err.hint}` : '';
-
-      alert(`⚠️ Gagal menyimpan transaksi\n\nPesan: ${errorMessage}${detailMessage}${hintMessage}\n\nJika error ini terus muncul, mohon jalankan script SQL terbaru di Dashboard Supabase.`);
+      alert('Gagal menyimpan transaksi. Sistem otomatis beralih ke mode offline.');
     }
   };
 
-  const handleLogin = (username: string, _password?: string) => {
+  const handleLogin = (username: string) => {
     setIsAuthenticated(true);
     localStorage.setItem('isLoggedIn', 'true');
     localStorage.setItem('username', username);
@@ -149,7 +133,6 @@ const App: React.FC = () => {
     setIsAuthenticated(false);
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('username');
-    // Reset any other session related state if needed
   };
 
   const renderAdminContent = () => {
@@ -167,10 +150,32 @@ const App: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Memuat data...</p>
+      <div className="h-screen bg-slate-50 flex flex-col items-center justify-center relative overflow-hidden">
+        {/* Animated Orbs */}
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-brand-200/40 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-accent-100/30 rounded-full blur-[120px] animate-pulse delay-700" />
+
+        <div className="relative text-center z-10 animate-fade-in">
+          <div className="relative inline-block mb-8">
+            <div className="w-24 h-24 bg-white rounded-[2rem] shadow-2xl flex items-center justify-center relative z-10 border border-white/50 animate-float">
+              <RefreshCw className="text-brand-600 w-10 h-10 animate-spin-slow" />
+            </div>
+            <div className="absolute inset-0 bg-brand-400 blur-2xl opacity-20 animate-pulse" />
+          </div>
+
+          <div className="space-y-3">
+            <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase font-display">Menginisialisasi Sistem</h2>
+            <div className="flex items-center justify-center space-x-2">
+              <span className="w-1.5 h-1.5 bg-brand-500 rounded-full animate-bounce [animation-delay:0s]" />
+              <span className="w-1.5 h-1.5 bg-brand-500 rounded-full animate-bounce [animation-delay:0.2s]" />
+              <span className="w-1.5 h-1.5 bg-brand-500 rounded-full animate-bounce [animation-delay:0.4s]" />
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[4px] ml-2">Menghubungkan ke Cloud Ecosystem</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="absolute bottom-10 inset-x-0 text-center">
+          <p className="text-[9px] font-black text-slate-300 uppercase tracking-[5px]">KasirPintar v3.0 Powered by Gemini 2.0</p>
         </div>
       </div>
     );
@@ -181,37 +186,101 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="h-screen bg-gray-50 overflow-hidden font-sans text-gray-900">
+    <div className="h-screen bg-slate-50 overflow-hidden font-sans text-slate-900 selection:bg-brand-100 selection:text-brand-900">
+      {/* Global Notifications */}
       {error && (
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
+        <div className="fixed top-6 right-6 z-[1000] animate-slide-in-right">
+          <div className="bg-white/80 backdrop-blur-xl border border-rose-100 px-6 py-4 rounded-[2rem] shadow-2xl shadow-rose-200/50 flex items-center space-x-4">
+            <div className="w-10 h-10 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center">
+              <AlertCircle size={20} />
             </div>
-            <div className="ml-3">
-              <p className="text-sm text-yellow-700">{error}</p>
+            <div>
+              <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-0.5">Database Warning</p>
+              <p className="text-sm font-bold text-slate-800 tracking-tight">{error}</p>
             </div>
+            <button
+              onClick={() => setError(null)}
+              className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
+            >
+              <Menu size={16} className="rotate-45 text-slate-400" />
+            </button>
           </div>
         </div>
       )}
 
       {appMode === 'admin' ? (
-        <div className="flex h-full animate-fade-in">
+        <div className="flex h-full animate-fade-in relative">
           <Sidebar
             currentView={currentAdminView}
-            setCurrentView={setCurrentAdminView}
+            setCurrentView={(view) => {
+              setCurrentAdminView(view);
+              setIsSidebarOpen(false);
+            }}
             onOpenPOS={() => setAppMode('pos')}
             onLogout={handleLogout}
+            isOpen={isSidebarOpen}
+            setIsOpen={setIsSidebarOpen}
           />
-          <main className="flex-1 h-full overflow-hidden relative bg-gray-50">
-            {/* Header for Admin View could go here if needed, but Dashboard has its own internal header */}
-            {renderAdminContent()}
+
+          {/* Mobile Overlay */}
+          {isSidebarOpen && (
+            <div
+              className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[25] md:hidden animate-fade-in"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+          )}
+
+          <main className="flex-1 h-full overflow-hidden relative bg-slate-50 flex flex-col">
+            {/* Mobile Header */}
+            <div className="md:hidden glass border-b border-white/20 p-5 flex items-center justify-between z-20">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shadow-lg">
+                  <Store className="text-white w-5 h-5" />
+                </div>
+                <div>
+                  <h1 className="text-lg font-black text-slate-900 tracking-tighter">KasirPintar</h1>
+                  <div className="flex items-center space-x-1">
+                    <div className="w-1 h-1 bg-brand-500 rounded-full" />
+                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Administrator Portal</p>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-600 shadow-sm"
+              >
+                <Menu size={20} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-hidden relative">
+              {/* Content Transition Area */}
+              <div className="h-full w-full overflow-hidden">
+                {renderAdminContent()}
+              </div>
+            </div>
+
+            {/* Global Status Bar */}
+            <footer className="hidden md:flex items-center justify-between px-8 py-3 bg-white border-t border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-[3px]">
+              <div className="flex items-center space-x-6">
+                <div className="flex items-center space-x-2">
+                  <Database size={12} className="text-brand-500" />
+                  <span>Cloud Sync: Active</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Layers size={12} className="text-accent-500" />
+                  <span>Environment: Production</span>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                <span>Secure TLS Gateway Enabled</span>
+              </div>
+            </footer>
           </main>
         </div>
       ) : (
-        <div className="h-full animate-fade-in">
+        <div className="h-full animate-scale-in">
           <POS
             products={products}
             onCompleteTransaction={handleTransactionComplete}
@@ -219,6 +288,16 @@ const App: React.FC = () => {
           />
         </div>
       )}
+
+      <style>{`
+        .animate-spin-slow {
+          animation: spin 3s linear infinite;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };

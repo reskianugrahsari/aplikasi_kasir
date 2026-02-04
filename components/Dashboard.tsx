@@ -4,7 +4,7 @@ import {
   LineChart, Line, Area, AreaChart
 } from 'recharts';
 import { Transaction, Product } from '../types';
-import { TrendingUp, ShoppingBag, DollarSign, Calendar, Package, ArrowUp, ArrowDown, Clock } from 'lucide-react';
+import { TrendingUp, ShoppingBag, DollarSign, Calendar, Package, ArrowUp, ArrowDown, Clock, ChevronRight } from 'lucide-react';
 
 interface DashboardProps {
   transactions: Transaction[];
@@ -19,7 +19,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ transactions, products }) 
     const todaysTransactions = transactions.filter(t => t.date.startsWith(today));
     const todayRevenue = todaysTransactions.reduce((sum, t) => sum + t.total, 0);
 
-    // Calculate yesterday's revenue for comparison
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split('T')[0];
@@ -31,7 +30,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ transactions, products }) 
       ? ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100
       : 0;
 
-    // Low stock products
     const lowStockCount = products.filter(p => p.stock < 10).length;
 
     return {
@@ -90,116 +88,139 @@ export const Dashboard: React.FC<DashboardProps> = ({ transactions, products }) 
   }, [transactions]);
 
   return (
-    <div className="p-6 h-full overflow-y-auto bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="p-8 h-full overflow-y-auto no-scrollbar animate-fade-in">
       {/* Header */}
-      <header className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">Dashboard Penjualan</h2>
-        <p className="text-gray-600">Ringkasan performa bisnis Anda hari ini</p>
+      <header className="mb-10 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+        <div>
+          <h2 className="text-4xl font-extrabold text-slate-900 mb-2 tracking-tight font-display">Dashboard Insight</h2>
+          <p className="text-slate-500 font-medium">Selamat datang kembali! Berikut adalah ringkasan performa bisnis Anda.</p>
+        </div>
+        <div className="flex items-center space-x-3 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="p-2 bg-brand-50 text-brand-600 rounded-xl">
+            <Calendar size={18} />
+          </div>
+          <span className="pr-4 text-sm font-bold text-slate-700">
+            {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+          </span>
+        </div>
       </header>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         <StatCard
-          title="Pendapatan Hari Ini"
+          title="Omzet Hari Ini"
           value={`Rp ${stats.todayRevenue.toLocaleString('id-ID')}`}
           icon={DollarSign}
-          gradient="from-blue-500 to-blue-600"
+          color="brand"
           change={stats.revenueChange}
-          changeLabel="vs kemarin"
+          changeLabel="dibanding kemarin"
         />
         <StatCard
-          title="Transaksi Hari Ini"
+          title="Transaksi Selesai"
           value={stats.todayCount.toString()}
           icon={ShoppingBag}
-          gradient="from-emerald-500 to-emerald-600"
-          subtitle="transaksi"
+          color="accent"
+          subtitle="transaksi hari ini"
         />
         <StatCard
           title="Total Pendapatan"
           value={`Rp ${stats.totalRevenue.toLocaleString('id-ID')}`}
           icon={TrendingUp}
-          gradient="from-purple-500 to-purple-600"
-          subtitle="semua waktu"
+          color="emerald"
+          subtitle="akumulasi semua waktu"
         />
         <StatCard
-          title="Stok Rendah"
+          title="Stok Inventaris"
           value={stats.lowStockCount.toString()}
           icon={Package}
-          gradient="from-orange-500 to-orange-600"
-          subtitle="produk perlu restock"
+          color="orange"
+          subtitle="produk stok menipis"
           alert={stats.lowStockCount > 0}
         />
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* Sales Trend Chart - Takes 2 columns */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-300">
-          <div className="flex items-center justify-between mb-6">
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+        {/* Sales Trend Chart */}
+        <div className="lg:col-span-2 bg-white p-8 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 hover:shadow-2xl hover:shadow-brand-100/30 transition-all duration-500 group">
+          <div className="flex items-center justify-between mb-8">
             <div>
-              <h3 className="text-xl font-bold text-gray-900">Tren Penjualan</h3>
-              <p className="text-sm text-gray-500 mt-1">7 hari terakhir</p>
+              <h3 className="text-2xl font-black text-slate-900 tracking-tight font-display">Tren Pertumbuhan</h3>
+              <p className="text-sm text-slate-400 font-medium mt-1">Estimasi pendapatan 7 hari terakhir</p>
             </div>
-            <div className="flex items-center space-x-4 text-sm">
+            <div className="flex items-center space-x-6">
               <div className="flex items-center">
-                <div className="w-3 h-3 rounded-full bg-indigo-500 mr-2"></div>
-                <span className="text-gray-600">Pendapatan</span>
+                <div className="w-2.5 h-2.5 rounded-full bg-brand-500 mr-2 ring-4 ring-brand-100"></div>
+                <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Revenue</span>
               </div>
               <div className="flex items-center">
-                <div className="w-3 h-3 rounded-full bg-emerald-500 mr-2"></div>
-                <span className="text-gray-600">Transaksi</span>
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2 ring-4 ring-emerald-100"></div>
+                <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Order</span>
               </div>
             </div>
           </div>
-          <div className="h-80">
+          <div className="h-[340px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={salesData}>
+              <AreaChart data={salesData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366F1" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#2d3bff" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#2d3bff" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                <CartesianGrid strokeDasharray="8 8" vertical={false} stroke="#f1f5f9" />
                 <XAxis
                   dataKey="name"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: '#6B7280', fontSize: 12 }}
-                  dy={10}
+                  tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 600 }}
+                  dy={15}
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: '#6B7280', fontSize: 12 }}
-                  tickFormatter={(val) => `${(val / 1000).toFixed(0)}k`}
-                  dx={-10}
+                  tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 600 }}
+                  tickFormatter={(val) => `Rp ${(val / 1000).toFixed(0)}k`}
+                  dx={-15}
                 />
                 <Tooltip
-                  formatter={(value: number, name: string) => {
-                    if (name === 'pendapatan') return [`Rp ${value.toLocaleString('id-ID')}`, 'Pendapatan'];
-                    return [value, 'Transaksi'];
-                  }}
-                  contentStyle={{
-                    borderRadius: '12px',
-                    border: 'none',
-                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                    padding: '12px'
+                  cursor={{ stroke: '#2d3bff', strokeWidth: 2, strokeDasharray: '5 5' }}
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-2xl animate-scale-in">
+                          <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">{label}</p>
+                          <div className="space-y-1">
+                            <p className="text-brand-400 font-bold flex items-center justify-between gap-4">
+                              <span>Revenue:</span>
+                              <span className="text-white text-lg">Rp {payload[0].value?.toLocaleString('id-ID')}</span>
+                            </p>
+                            <p className="text-emerald-400 font-bold flex items-center justify-between gap-4 border-t border-slate-800 pt-1 mt-1">
+                              <span>Orders:</span>
+                              <span className="text-white">{payload[1]?.value} trx</span>
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
                   }}
                 />
                 <Area
                   type="monotone"
                   dataKey="pendapatan"
-                  stroke="#6366F1"
-                  strokeWidth={3}
+                  stroke="#2d3bff"
+                  strokeWidth={4}
                   fill="url(#colorRevenue)"
+                  animationDuration={2000}
                 />
-                <Line
+                <Area
                   type="monotone"
                   dataKey="transaksi"
                   stroke="#10B981"
-                  strokeWidth={2}
-                  dot={{ fill: '#10B981', r: 4 }}
+                  strokeWidth={0}
+                  fill="transparent"
+                  activeDot={{ r: 6, fill: '#10B981', stroke: '#fff', strokeWidth: 2 }}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -207,92 +228,101 @@ export const Dashboard: React.FC<DashboardProps> = ({ transactions, products }) 
         </div>
 
         {/* Top Products */}
-        <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-300">
-          <h3 className="text-xl font-bold text-gray-900 mb-2">Produk Terlaris</h3>
-          <p className="text-sm text-gray-500 mb-6">Berdasarkan pendapatan</p>
-          <div className="space-y-4">
+        <div className="bg-white p-8 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col hover:shadow-2xl transition-all duration-500">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-2xl font-black text-slate-900 tracking-tight font-display">Produk Unggulan</h3>
+            <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
+              <ChevronRight size={20} />
+            </div>
+          </div>
+          <div className="space-y-4 flex-1">
             {topProducts.length > 0 ? (
               topProducts.map((product, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-sm ${index === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-500' :
-                        index === 1 ? 'bg-gradient-to-br from-gray-400 to-gray-500' :
-                          index === 2 ? 'bg-gradient-to-br from-orange-400 to-orange-500' :
-                            'bg-gradient-to-br from-indigo-400 to-indigo-500'
+                <div key={index} className="flex items-center justify-between p-4 bg-slate-50/50 rounded-2xl border border-transparent hover:border-brand-100 hover:bg-white hover:shadow-lg hover:shadow-brand-100/20 transition-all duration-300 group">
+                  <div className="flex items-center space-x-4">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-white shadow-lg ${index === 0 ? 'bg-gradient-to-br from-yellow-400 to-orange-500' :
+                      index === 1 ? 'bg-gradient-to-br from-slate-400 to-slate-600' :
+                        index === 2 ? 'bg-gradient-to-br from-amber-600 to-amber-800' :
+                          'bg-gradient-to-br from-brand-400 to-brand-600'
                       }`}>
                       {index + 1}
                     </div>
                     <div>
-                      <p className="font-semibold text-gray-900 text-sm">{product.name}</p>
-                      <p className="text-xs text-gray-500">{product.quantity} terjual</p>
+                      <p className="font-bold text-slate-900">{product.name}</p>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{product.quantity} Terjual</p>
                     </div>
                   </div>
-                  <p className="font-bold text-indigo-600 text-sm">
-                    Rp {(product.revenue / 1000).toFixed(0)}k
-                  </p>
+                  <div className="text-right">
+                    <p className="font-black text-brand-600 group-hover:scale-110 transition-transform origin-right">
+                      Rp {(product.revenue / 1000).toFixed(0)}k
+                    </p>
+                  </div>
                 </div>
               ))
             ) : (
-              <div className="text-center py-8 text-gray-400">
-                <Package size={40} className="mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Belum ada data penjualan</p>
+              <div className="h-full flex flex-col items-center justify-center text-slate-300 py-12">
+                <Package size={64} strokeWidth={1} className="mb-4 opacity-20" />
+                <p className="font-bold text-slate-400 italic">Menunggu data penjualan...</p>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Recent Transactions */}
-      <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-300">
-        <div className="flex items-center justify-between mb-6">
+      {/* Recent Transactions Section */}
+      <div className="bg-white p-8 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden hover:shadow-2xl transition-all duration-500 mb-8">
+        <div className="flex items-center justify-between mb-8">
           <div>
-            <h3 className="text-xl font-bold text-gray-900">Transaksi Terbaru</h3>
-            <p className="text-sm text-gray-500 mt-1">5 transaksi terakhir</p>
+            <h3 className="text-2xl font-black text-slate-900 tracking-tight font-display">Log Transaksi Terkini</h3>
+            <p className="text-sm text-slate-400 font-medium">Monitoring arus kas real-time</p>
           </div>
-          <Clock className="text-gray-400" size={24} />
+          <div className="p-3 bg-slate-50 text-slate-400 rounded-2xl animate-pulse-soft">
+            <Clock size={24} />
+          </div>
         </div>
 
         {recentTransactions.length > 0 ? (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto -mx-8 px-8 no-scrollbar">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">ID</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Waktu</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Item</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Pembayaran</th>
-                  <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</th>
+                <tr className="text-left">
+                  <th className="py-4 px-4 text-[11px] font-black text-slate-400 uppercase tracking-[2px]">ID Transaksi</th>
+                  <th className="py-4 px-4 text-[11px] font-black text-slate-400 uppercase tracking-[2px]">Waktu & Tanggal</th>
+                  <th className="py-4 px-4 text-[11px] font-black text-slate-400 uppercase tracking-[2px]">Daftar Item</th>
+                  <th className="py-4 px-4 text-[11px] font-black text-slate-400 uppercase tracking-[2px]">Metode</th>
+                  <th className="py-4 px-4 text-right text-[11px] font-black text-slate-400 uppercase tracking-[2px]">Total Tagihan</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-slate-100">
                 {recentTransactions.map((transaction) => (
-                  <tr key={transaction.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="py-4 px-4">
-                      <span className="font-mono text-sm text-gray-600">#{transaction.id.slice(-6)}</span>
+                  <tr key={transaction.id} className="hover:bg-brand-50/30 transition-colors group">
+                    <td className="py-5 px-4">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 rounded-full bg-brand-500"></div>
+                        <span className="font-mono text-sm font-bold text-slate-600">#{transaction.id.slice(-6).toUpperCase()}</span>
+                      </div>
                     </td>
-                    <td className="py-4 px-4">
-                      <span className="text-sm text-gray-700">
-                        {new Date(transaction.date).toLocaleString('id-ID', {
-                          day: 'numeric',
-                          month: 'short',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
+                    <td className="py-5 px-4">
+                      <div className="text-sm font-bold text-slate-700">
+                        {new Date(transaction.date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        {new Date(transaction.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                      </div>
                     </td>
-                    <td className="py-4 px-4">
-                      <span className="text-sm text-gray-700">{transaction.items.length} item</span>
+                    <td className="py-5 px-4 text-sm font-bold text-slate-700">
+                      {transaction.items.length} Barang
                     </td>
-                    <td className="py-4 px-4">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${transaction.paymentMethod === 'cash'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-blue-100 text-blue-700'
+                    <td className="py-5 px-4">
+                      <span className={`inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${transaction.paymentMethod === 'cash'
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-brand-100 text-brand-700'
                         }`}>
                         {transaction.paymentMethod === 'cash' ? 'Cash' : 'QRIS'}
                       </span>
                     </td>
-                    <td className="py-4 px-4 text-right">
-                      <span className="font-bold text-gray-900">
+                    <td className="py-5 px-4 text-right">
+                      <span className="font-black text-slate-900 text-lg group-hover:text-brand-600 transition-colors">
                         Rp {transaction.total.toLocaleString('id-ID')}
                       </span>
                     </td>
@@ -302,9 +332,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ transactions, products }) 
             </table>
           </div>
         ) : (
-          <div className="text-center py-12 text-gray-400">
-            <ShoppingBag size={48} className="mx-auto mb-3 opacity-50" />
-            <p className="text-sm">Belum ada transaksi</p>
+          <div className="text-center py-16 flex flex-col items-center">
+            <div className="w-24 h-24 bg-slate-50 rounded-[2rem] flex items-center justify-center mb-6">
+              <ShoppingBag size={48} className="text-slate-200" />
+            </div>
+            <p className="font-bold text-slate-400 italic font-display text-xl uppercase tracking-widest">Belum Ada Transaksi</p>
           </div>
         )}
       </div>
@@ -316,38 +348,53 @@ const StatCard = ({
   title,
   value,
   icon: Icon,
-  gradient,
+  color,
   change,
   changeLabel,
   subtitle,
   alert
-}: any) => (
-  <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className={`p-3 rounded-xl bg-gradient-to-br ${gradient} shadow-lg`}>
-          <Icon size={24} className="text-white" />
-        </div>
-        {change !== undefined && (
-          <div className={`flex items-center space-x-1 text-sm font-semibold ${change >= 0 ? 'text-green-600' : 'text-red-600'
-            }`}>
-            {change >= 0 ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
-            <span>{Math.abs(change).toFixed(1)}%</span>
+}: any) => {
+  const themes = {
+    brand: 'from-brand-600 to-brand-700 text-brand-600 bg-brand-50 ring-brand-100',
+    accent: 'from-accent-500 to-accent-600 text-accent-600 bg-accent-50 ring-accent-100',
+    emerald: 'from-emerald-500 to-emerald-600 text-emerald-600 bg-emerald-50 ring-emerald-100',
+    orange: 'from-orange-500 to-orange-600 text-orange-600 bg-orange-50 ring-orange-100',
+  };
+
+  const themeClass = themes[color as keyof typeof themes] || themes.brand;
+
+  return (
+    <div className="bg-white rounded-[2rem] p-7 shadow-xl shadow-slate-200/50 border border-slate-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 overflow-hidden relative group">
+      {/* Background Decor */}
+      <div className={`absolute -right-8 -top-8 w-32 h-32 rounded-full opacity-5 group-hover:opacity-10 transition-opacity bg-gradient-to-br ${themeClass.split(' ').slice(0, 2).join(' ')}`} />
+
+      <div className="relative z-10">
+        <div className="flex items-center justify-between mb-6">
+          <div className={`p-4 rounded-2xl bg-gradient-to-br ${themeClass.split(' ').slice(0, 2).join(' ')} shadow-lg shadow-inherit animate-float`}>
+            <Icon size={24} className="text-white" />
           </div>
-        )}
-      </div>
-      <div>
-        <p className="text-sm font-medium text-gray-500 mb-1">{title}</p>
-        <h3 className="text-2xl font-bold text-gray-900 mb-1">{value}</h3>
-        {subtitle && (
-          <p className={`text-xs ${alert ? 'text-orange-600 font-semibold' : 'text-gray-400'}`}>
-            {subtitle}
-          </p>
-        )}
-        {changeLabel && (
-          <p className="text-xs text-gray-400">{changeLabel}</p>
-        )}
+          {change !== undefined && (
+            <div className={`flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-black ${change >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+              }`}>
+              {change >= 0 ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
+              <span>{Math.abs(change).toFixed(1)}%</span>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <p className="text-[11px] font-black text-slate-400 uppercase tracking-[2px] mb-2">{title}</p>
+          <h3 className="text-3xl font-black text-slate-900 tracking-tight font-display mb-1">{value}</h3>
+          {subtitle && (
+            <p className={`text-[10px] font-black uppercase tracking-widest ${alert ? 'text-red-500 animate-pulse' : 'text-slate-400'}`}>
+              {subtitle}
+            </p>
+          )}
+          {changeLabel && (
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{changeLabel}</p>
+          )}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
