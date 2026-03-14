@@ -337,6 +337,6 @@ Proyek ini dikembangkan untuk keperluan internal. Seluruh hak cipta dilindungi.
 ---
 
 <div align="center">
-  <p>Dibuat dengan ❤️ menggunakan React + TypeScript + Vite</p>
+  <p>Dibuat oleh Reski Anugrah Sari menggunakan React + TypeScript + Vite</p>
   <p><strong>KasirPintar AI</strong> — Smart POS Ecosystem</p>
 </div>
