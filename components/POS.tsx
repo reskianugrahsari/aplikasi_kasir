@@ -113,9 +113,6 @@ export const POS: React.FC<POSProps> = ({ products, onCompleteTransaction, onExi
                                     className="w-full pl-12 pr-6 py-4 bg-slate-800/50 border border-white/10 text-white placeholder-slate-500 focus:bg-slate-800 focus:border-brand-500/50 rounded-2xl focus:outline-none focus:ring-4 focus:ring-brand-500/10 transition-all text-lg font-medium"
                                     autoFocus
                                 />
-                                <div className="absolute right-4 top-1/2 -translate-y-1/2 px-2 py-1 bg-white/5 rounded-lg border border-white/10">
-                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">⌘ F</span>
-                                </div>
                             </div>
 
                             <div className="flex space-x-3 overflow-x-auto no-scrollbar pb-1">

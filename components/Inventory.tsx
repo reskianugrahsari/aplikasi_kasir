@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Product, Category } from '../types';
-import { Plus, Edit2, Trash2, Search, X, Package, Tag, Layers, ArrowUpRight, Filter, MoreHorizontal, AlertCircle, ShoppingCart, Image as ImageIcon } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, X, Package, Tag, Layers, ArrowUpRight, Filter, MoreHorizontal, AlertCircle, ShoppingCart, Image as ImageIcon, Check, SlidersHorizontal } from 'lucide-react';
 import * as supabaseService from '../services/supabaseService';
 
 interface InventoryProps {
@@ -14,6 +14,58 @@ export const Inventory: React.FC<InventoryProps> = ({ products, setProducts }) =
   const [isSaving, setIsSaving] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
+  // Filter state
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const filterPanelRef = useRef<HTMLDivElement>(null);
+
+  // Draft filter (before saving)
+  const [draftCategories, setDraftCategories] = useState<Category[]>([]);
+  const [draftStockStatus, setDraftStockStatus] = useState<'all' | 'low' | 'ready'>('all');
+
+  // Applied filter (after clicking Simpan)
+  const [appliedCategories, setAppliedCategories] = useState<Category[]>([]);
+  const [appliedStockStatus, setAppliedStockStatus] = useState<'all' | 'low' | 'ready'>('all');
+
+  const hasActiveFilter = appliedCategories.length > 0 || appliedStockStatus !== 'all';
+
+  // Close filter panel when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (filterPanelRef.current && !filterPanelRef.current.contains(e.target as Node)) {
+        setIsFilterOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleOpenFilter = () => {
+    // Sync draft with applied when opening
+    setDraftCategories([...appliedCategories]);
+    setDraftStockStatus(appliedStockStatus);
+    setIsFilterOpen(prev => !prev);
+  };
+
+  const toggleDraftCategory = (cat: Category) => {
+    setDraftCategories(prev =>
+      prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+    );
+  };
+
+  const handleSaveFilter = () => {
+    setAppliedCategories([...draftCategories]);
+    setAppliedStockStatus(draftStockStatus);
+    setIsFilterOpen(false);
+  };
+
+  const handleResetFilter = () => {
+    setDraftCategories([]);
+    setDraftStockStatus('all');
+    setAppliedCategories([]);
+    setAppliedStockStatus('all');
+    setIsFilterOpen(false);
+  };
+
   // Form State
   const [formData, setFormData] = useState({
     name: '',
@@ -22,6 +74,14 @@ export const Inventory: React.FC<InventoryProps> = ({ products, setProducts }) =
     stock: '',
     image: 'https://picsum.photos/200/200'
   });
+
+  const saveToLocalStorage = (updatedProducts: Product[]) => {
+    try {
+      localStorage.setItem('products', JSON.stringify(updatedProducts));
+    } catch (e) {
+      console.warn('Gagal menyimpan ke localStorage:', e);
+    }
+  };
 
   const handleSave = async () => {
     if (!formData.name || !formData.price || formData.price === '0') return;
@@ -37,18 +97,29 @@ export const Inventory: React.FC<InventoryProps> = ({ products, setProducts }) =
           stock: Number(formData.stock) || 0,
         };
 
-        await supabaseService.updateProduct(updatedProduct.id, {
-          name: updatedProduct.name,
-          price: updatedProduct.price,
-          category: updatedProduct.category,
-          stock: updatedProduct.stock,
-          image: updatedProduct.image
+        // Coba update ke Supabase, jika gagal fallback ke localStorage
+        try {
+          await supabaseService.updateProduct(updatedProduct.id, {
+            name: updatedProduct.name,
+            price: updatedProduct.price,
+            category: updatedProduct.category,
+            stock: updatedProduct.stock,
+            image: updatedProduct.image
+          });
+        } catch (supabaseError) {
+          console.warn('Supabase tidak tersedia, menyimpan secara lokal:', supabaseError);
+        }
+
+        // Update local state regardless of Supabase result
+        setProducts(prev => {
+          const updated = prev.map(p => p.id === updatedProduct.id ? updatedProduct : p);
+          saveToLocalStorage(updated);
+          return updated;
         });
 
-        setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
       } else {
         const newProduct: Product = {
-          id: Math.random().toString(36).substr(2, 9),
+          id: `local_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
           name: formData.name,
           price: Number(formData.price) || 0,
           category: formData.category as Category,
@@ -56,8 +127,18 @@ export const Inventory: React.FC<InventoryProps> = ({ products, setProducts }) =
           image: `https://picsum.photos/seed/${formData.name?.replace(/\s/g, '')}/200/200`
         };
 
-        await supabaseService.addProduct(newProduct);
-        setProducts(prev => [...prev, newProduct]);
+        // Coba tambah ke Supabase, jika gagal fallback ke localStorage
+        try {
+          await supabaseService.addProduct(newProduct);
+        } catch (supabaseError) {
+          console.warn('Supabase tidak tersedia, menyimpan secara lokal:', supabaseError);
+        }
+
+        setProducts(prev => {
+          const updated = [...prev, newProduct];
+          saveToLocalStorage(updated);
+          return updated;
+        });
       }
 
       setIsModalOpen(false);
@@ -101,9 +182,15 @@ export const Inventory: React.FC<InventoryProps> = ({ products, setProducts }) =
     }
   };
 
-  const filteredProducts = products.filter(p =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProducts = products.filter(p => {
+    const matchSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchCategory = appliedCategories.length === 0 || appliedCategories.includes(p.category);
+    const matchStock =
+      appliedStockStatus === 'all' ? true :
+      appliedStockStatus === 'low' ? p.stock < 10 :
+      p.stock >= 10;
+    return matchSearch && matchCategory && matchStock;
+  });
 
   return (
     <div className="p-8 h-full overflow-y-auto no-scrollbar animate-fade-in relative">
@@ -145,10 +232,105 @@ export const Inventory: React.FC<InventoryProps> = ({ products, setProducts }) =
         </div>
 
         <div className="flex items-center space-x-3 w-full lg:w-auto">
-          <button className="flex-1 lg:flex-none flex items-center justify-center space-x-2 px-6 py-4 bg-white border border-slate-100 rounded-2xl text-slate-600 font-bold hover:bg-slate-50 transition-all">
-            <Filter size={18} />
-            <span>Filter</span>
-          </button>
+          {/* Filter Button with Panel */}
+          <div className="relative" ref={filterPanelRef}>
+            <button
+              onClick={handleOpenFilter}
+              className={`flex-1 lg:flex-none flex items-center justify-center space-x-2 px-6 py-4 rounded-2xl font-bold transition-all border ${
+                hasActiveFilter
+                  ? 'bg-brand-600 text-white border-brand-600 shadow-lg shadow-brand-200'
+                  : 'bg-white border-slate-100 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <SlidersHorizontal size={18} />
+              <span>Filter</span>
+              {hasActiveFilter && (
+                <span className="ml-1 bg-white text-brand-600 text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center">
+                  {appliedCategories.length + (appliedStockStatus !== 'all' ? 1 : 0)}
+                </span>
+              )}
+            </button>
+
+            {/* Filter Panel Dropdown */}
+            {isFilterOpen && (
+              <div className="absolute right-0 top-full mt-3 w-80 bg-white rounded-3xl shadow-2xl shadow-slate-200/80 border border-slate-100 z-50 overflow-hidden animate-scale-in">
+                {/* Panel Header */}
+                <div className="px-6 py-5 border-b border-slate-50 flex items-center justify-between bg-slate-50/60">
+                  <div className="flex items-center space-x-2">
+                    <SlidersHorizontal size={16} className="text-brand-600" />
+                    <span className="text-xs font-black text-slate-700 uppercase tracking-[3px]">Filter Produk</span>
+                  </div>
+                  <button
+                    onClick={() => setIsFilterOpen(false)}
+                    className="p-1.5 text-slate-400 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition-all"
+                  >
+                    <X size={14} className="hover:rotate-90 transition-transform" />
+                  </button>
+                </div>
+
+                <div className="p-6 space-y-6">
+                  {/* Category Filter */}
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[3px]">Kategori</label>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.values(Category).map(cat => (
+                        <button
+                          key={cat}
+                          onClick={() => toggleDraftCategory(cat)}
+                          className={`flex items-center space-x-1.5 px-4 py-2 rounded-xl text-xs font-bold border transition-all ${
+                            draftCategories.includes(cat)
+                              ? 'bg-brand-600 text-white border-brand-600 shadow-md shadow-brand-200'
+                              : 'bg-slate-50 text-slate-600 border-slate-100 hover:bg-brand-50 hover:border-brand-100 hover:text-brand-600'
+                          }`}
+                        >
+                          {draftCategories.includes(cat) && <Check size={12} strokeWidth={3} />}
+                          <span>{cat}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Stock Status Filter */}
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[3px]">Status Stok</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['all', 'ready', 'low'] as const).map(status => (
+                        <button
+                          key={status}
+                          onClick={() => setDraftStockStatus(status)}
+                          className={`py-2.5 px-3 rounded-xl text-[11px] font-black border transition-all ${
+                            draftStockStatus === status
+                              ? 'bg-slate-900 text-white border-slate-900 shadow-md'
+                              : 'bg-slate-50 text-slate-500 border-slate-100 hover:bg-slate-100'
+                          }`}
+                        >
+                          {status === 'all' ? 'Semua' : status === 'ready' ? '✅ Ready' : '⚠️ Low'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Panel Footer — Save & Reset */}
+                <div className="px-6 py-5 bg-slate-50/60 border-t border-slate-100 flex items-center justify-between gap-3">
+                  <button
+                    onClick={handleResetFilter}
+                    className="px-4 py-2.5 text-[11px] font-black text-slate-400 hover:text-rose-500 uppercase tracking-widest transition-all"
+                  >
+                    Reset
+                  </button>
+                  <button
+                    onClick={handleSaveFilter}
+                    className="flex items-center space-x-2 bg-brand-600 text-white px-6 py-2.5 rounded-xl hover:bg-brand-700 transition-all duration-200 shadow-lg shadow-brand-200 font-black uppercase tracking-widest text-[11px]"
+                  >
+                    <Check size={14} strokeWidth={3} />
+                    <span>Simpan Filter</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <button className="flex-1 lg:flex-none flex items-center justify-center space-x-2 px-6 py-4 bg-white border border-slate-100 rounded-2xl text-slate-600 font-bold hover:bg-slate-50 transition-all">
             <ArrowUpRight size={18} />
             <span>Export CSV</span>
@@ -273,9 +455,9 @@ export const Inventory: React.FC<InventoryProps> = ({ products, setProducts }) =
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in">
           <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md" onClick={() => setIsModalOpen(false)} />
 
-          <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-lg overflow-hidden relative animate-scale-in border border-white/20">
+          <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-lg relative animate-scale-in border border-white/20 flex flex-col max-h-[90vh]">
             {/* Modal Header */}
-            <div className="px-10 py-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+            <div className="px-10 py-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50 flex-shrink-0 rounded-t-[3rem]">
               <div>
                 <div className="flex items-center space-x-2 text-brand-600 mb-1 font-black uppercase tracking-[3px] text-[10px]">
                   <Layers size={14} className="fill-brand-600" />
@@ -294,7 +476,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, setProducts }) =
             </div>
 
             {/* Modal Body */}
-            <div className="p-10 space-y-6">
+            <div className="p-10 space-y-6 overflow-y-auto flex-1">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-1">Nama Produk Digital</label>
                 <div className="relative group">
@@ -367,7 +549,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, setProducts }) =
             </div>
 
             {/* Modal Footer */}
-            <div className="px-10 py-8 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
+            <div className="px-10 py-8 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between flex-shrink-0 rounded-b-[3rem]">
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="px-6 py-4 text-slate-500 font-bold hover:text-slate-900 transition-all uppercase tracking-widest text-[10px]"

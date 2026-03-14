@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Package, Bot, LogOut, Store, X, Zap } from 'lucide-react';
+import { LayoutDashboard, Package, Bot, LogOut, Store, X } from 'lucide-react';
 import { AdminView } from '../types';
 
 interface SidebarProps {
@@ -27,9 +27,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, o
           </div>
           <div>
             <h1 className="text-xl font-extrabold text-slate-900 tracking-tight font-display">KasirPintar</h1>
-            <div className="flex items-center text-[10px] text-brand-600 font-bold uppercase tracking-widest mt-0.5">
-              <Zap size={10} className="mr-1 fill-brand-600" /> AI Powered
-            </div>
           </div>
         </div>
         <button onClick={() => setIsOpen(false)} className="md:hidden p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all">
